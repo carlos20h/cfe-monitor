@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 
 type Reading = {
@@ -81,6 +82,9 @@ export default function LecturasPage() {
   return (
     <main className="min-h-screen bg-gradient-to-b from-sky-100 to-sky-200 p-6 flex flex-col items-center">
       <div className="w-full max-w-2xl bg-white rounded-xl shadow-md p-6">
+        <Link href="/" className="text-sky-700 hover:underline">
+          &larr; Inicio
+        </Link>
         <h1 className="text-2xl font-bold mb-4 text-sky-900">Registrar lectura</h1>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
