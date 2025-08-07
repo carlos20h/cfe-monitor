@@ -87,14 +87,18 @@ export default function BimestresPage() {
   const chartData = () => {
     if (lecturasFiltradas.length < 2) return []
 
-    const data = []
+    const data: { fecha: string; consumoNeto?: number; proyeccion?: number }[] = []
+    let acumulado = 0
+    let total = 0
     for (let i = 1; i < lecturasFiltradas.length; i++) {
       const prev = lecturasFiltradas[i - 1]
       const actual = lecturasFiltradas[i]
 
       const fecha = actual.fecha
-      const consumoNeto = (actual.tomada - prev.tomada) - (actual.inyectada - prev.inyectada)
-      data.push({ fecha, consumoNeto })
+      const consumoDia = (actual.tomada - prev.tomada) - (actual.inyectada - prev.inyectada)
+      acumulado += consumoDia
+      total += consumoDia
+      data.push({ fecha, consumoNeto: acumulado })
     }
 
     // Si el bimestre está abierto, proyectar hasta día 60
@@ -102,11 +106,13 @@ export default function BimestresPage() {
     const isBimestreAbierto = bimestreActivo?.fin === hoy
     if (isBimestreAbierto) {
       const dias = data.length
-      const promedio = data.reduce((acc, d) => acc + d.consumoNeto, 0) / dias
+      const promedio = dias ? total / dias : 0
+      let proyeccionAcumulada = acumulado
       for (let i = dias + 1; i <= 60; i++) {
+        proyeccionAcumulada += promedio
         data.push({
           fecha: `Día ${i}`,
-          proyeccion: promedio
+          proyeccion: proyeccionAcumulada
         })
       }
     }
@@ -281,10 +287,10 @@ export default function BimestresPage() {
         {/* Cuadro de resumen */}
         {calcularResumen()}
 
-        {/* Gráfica de consumo neto */}
+        {/* Gráfica de consumo neto acumulado */}
         {lecturasFiltradas.length >= 2 && (
           <div className="mt-6 mb-8">
-            <h2 className="text-lg font-semibold mb-2 text-sky-900">📉 Consumo neto diario</h2>
+            <h2 className="text-lg font-semibold mb-2 text-sky-900">📉 Consumo neto acumulado</h2>
             <ResponsiveContainer width="100%" height={300}>
               <LineChart data={chartData()}>
                 <CartesianGrid strokeDasharray="3 3" />
@@ -292,7 +298,7 @@ export default function BimestresPage() {
                 <YAxis />
                 <Tooltip />
                 <Legend />
-                <Line type="monotone" dataKey="consumoNeto" stroke="#004184" name="Consumo neto" />
+                <Line type="monotone" dataKey="consumoNeto" stroke="#004184" name="Consumo neto acumulado" />
                 <Line type="monotone" dataKey="proyeccion" stroke="#E8871C" name="Proyección" strokeDasharray="4 4" />
               </LineChart>
             </ResponsiveContainer>
