@@ -257,74 +257,76 @@ export default function BimestresPage() {
 
 
   return (
-    <main className="max-w-4xl mx-auto p-4">
-      <h1 className="text-2xl font-bold mb-4">Lecturas por bimestre</h1>
+    <main className="min-h-screen bg-gradient-to-b from-sky-100 to-sky-200 p-6 flex flex-col items-center">
+      <div className="w-full max-w-4xl bg-white rounded-xl shadow-md p-6">
+        <h1 className="text-2xl font-bold mb-4 text-sky-900">Lecturas por bimestre</h1>
 
-      {bimestres.length > 0 && (
-        <div className="mb-4">
-          <label className="font-medium">Seleccionar bimestre:</label>
-          <select
-            value={bimestreActivo?.nombre}
-            onChange={(e) =>
-              setBimestreActivo(bimestres.find(b => b.nombre === e.target.value) ?? null)
-            }
-            className="ml-2 border px-2 py-1 rounded"
-          >
-            {bimestres.map((b, i) => (
-              <option key={i} value={b.nombre}>{b.nombre}</option>
-            ))}
-          </select>
-        </div>
-      )}
+        {bimestres.length > 0 && (
+          <div className="mb-4">
+            <label className="font-medium text-sky-900">Seleccionar bimestre:</label>
+            <select
+              value={bimestreActivo?.nombre}
+              onChange={(e) =>
+                setBimestreActivo(bimestres.find(b => b.nombre === e.target.value) ?? null)
+              }
+              className="ml-2 border px-2 py-1 rounded"
+            >
+              {bimestres.map((b, i) => (
+                <option key={i} value={b.nombre}>{b.nombre}</option>
+              ))}
+            </select>
+          </div>
+        )}
 
-      {/* Cuadro de resumen */}
-      {calcularResumen()}
+        {/* Cuadro de resumen */}
+        {calcularResumen()}
 
-      {/* Gráfica de consumo neto */}
-      {lecturasFiltradas.length >= 2 && (
-        <div className="mt-6 mb-8">
-          <h2 className="text-lg font-semibold mb-2">📉 Consumo neto diario</h2>
-          <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={chartData()}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="fecha" />
-              <YAxis />
-              <Tooltip />
-              <Legend />
-              <Line type="monotone" dataKey="consumoNeto" stroke="#004184" name="Consumo neto" />
-              <Line type="monotone" dataKey="proyeccion" stroke="#E8871C" name="Proyección" strokeDasharray="4 4" />
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
-      )}
+        {/* Gráfica de consumo neto */}
+        {lecturasFiltradas.length >= 2 && (
+          <div className="mt-6 mb-8">
+            <h2 className="text-lg font-semibold mb-2 text-sky-900">📉 Consumo neto diario</h2>
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={chartData()}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="fecha" />
+                <YAxis />
+                <Tooltip />
+                <Legend />
+                <Line type="monotone" dataKey="consumoNeto" stroke="#004184" name="Consumo neto" />
+                <Line type="monotone" dataKey="proyeccion" stroke="#E8871C" name="Proyección" strokeDasharray="4 4" />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        )}
 
-      {/* Tabla de lecturas */}
-      <h2 className="text-xl font-semibold mb-2">
-        Lecturas del {bimestreActivo?.inicio} al {bimestreActivo?.fin}
-      </h2>
+        {/* Tabla de lecturas */}
+        <h2 className="text-xl font-semibold mb-2 text-sky-900">
+          Lecturas del {bimestreActivo?.inicio} al {bimestreActivo?.fin}
+        </h2>
 
-      <table className="w-full text-sm border-collapse">
-        <thead>
-          <tr className="bg-gray-100">
-            <th className="border px-2 py-1">Fecha</th>
-            <th className="border px-2 py-1">Tomada</th>
-            <th className="border px-2 py-1">Inyectada</th>
-            <th className="border px-2 py-1">Corte</th>
-            <th className="border px-2 py-1">Observación</th>
-          </tr>
-        </thead>
-        <tbody>
-          {lecturasFiltradas.map((r) => (
-            <tr key={r.id}>
-              <td className="border px-2 py-1">{r.fecha}</td>
-              <td className="border px-2 py-1">{r.tomada}</td>
-              <td className="border px-2 py-1">{r.inyectada}</td>
-              <td className="border px-2 py-1">{r.corte ? '✅' : '—'}</td>
-              <td className="border px-2 py-1">{r.observacion ?? '—'}</td>
+        <table className="w-full text-sm border-collapse">
+          <thead>
+            <tr className="bg-sky-100">
+              <th className="border px-2 py-1">Fecha</th>
+              <th className="border px-2 py-1">Tomada</th>
+              <th className="border px-2 py-1">Inyectada</th>
+              <th className="border px-2 py-1">Corte</th>
+              <th className="border px-2 py-1">Observación</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {lecturasFiltradas.map((r) => (
+              <tr key={r.id}>
+                <td className="border px-2 py-1">{r.fecha}</td>
+                <td className="border px-2 py-1">{r.tomada}</td>
+                <td className="border px-2 py-1">{r.inyectada}</td>
+                <td className="border px-2 py-1">{r.corte ? '✅' : '—'}</td>
+                <td className="border px-2 py-1">{r.observacion ?? '—'}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </main>
   )
 }
