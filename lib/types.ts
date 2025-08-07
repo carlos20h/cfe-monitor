@@ -2,6 +2,7 @@ export type Bimestre = {
   nombre: string
   inicio: string
   fin: string
+  esActual?: boolean
 }
 
 export type Reading = {
