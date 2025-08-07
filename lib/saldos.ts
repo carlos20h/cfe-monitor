@@ -1,4 +1,4 @@
-import type { Reading, Bimestre, ResultadoBimestre } from '@/lib/types'
+import type { Reading } from '@/lib/types'
 
 export type Bimestre = {
   nombre: string

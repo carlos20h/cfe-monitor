@@ -37,11 +37,20 @@ export default function LecturasPage() {
   }, [])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value, type, checked } = e.target
-    setForm(prev => ({
-      ...prev,
-      [name]: type === 'checkbox' ? checked : value
-    }))
+    const target = e.target
+    const { name, value } = target
+    if (target instanceof HTMLInputElement && target.type === 'checkbox') {
+      const { checked } = target
+      setForm(prev => ({
+        ...prev,
+        [name]: checked
+      }))
+    } else {
+      setForm(prev => ({
+        ...prev,
+        [name]: value
+      }))
+    }
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
