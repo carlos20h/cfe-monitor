@@ -38,10 +38,13 @@ export default function LecturasPage() {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const target = e.target as HTMLInputElement
+
     const { name, value, type, checked } = target
+
+
     setForm(prev => ({
       ...prev,
-      [name]: type === 'checkbox' ? checked : value
+      [name]: type === 'checkbox' ? target.checked : value,
     }))
   }
 

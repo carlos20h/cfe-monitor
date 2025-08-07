@@ -1,21 +1,4 @@
-import type { Reading } from '@/lib/types'
-
-export type Bimestre = {
-  nombre: string
-  inicio: string
-  fin: string
-  esActual?: boolean
-}
-
-export type ResultadoBimestre = {
-  nombre: string
-  neto: number
-  costoEstimado: number
-  saldoAplicado: number
-  saldoRestante: number
-  esActual: boolean
-  detalle: string
-}
+import type { Reading,Bimestre, ResultadoBimestre } from '@/lib/types'
 
 export function calcularSaldosPorBimestre(
   bimestres: Bimestre[],
