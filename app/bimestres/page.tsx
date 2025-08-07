@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import { Reading } from '@/lib/types'
 import {
@@ -259,6 +260,9 @@ export default function BimestresPage() {
   return (
     <main className="min-h-screen bg-gradient-to-b from-sky-100 to-sky-200 p-6 flex flex-col items-center">
       <div className="w-full max-w-4xl bg-white rounded-xl shadow-md p-6">
+        <Link href="/" className="text-sky-700 hover:underline">
+          &larr; Inicio
+        </Link>
         <h1 className="text-2xl font-bold mb-4 text-sky-900">Lecturas por bimestre</h1>
 
         {bimestres.length > 0 && (
