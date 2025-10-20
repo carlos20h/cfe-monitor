@@ -170,7 +170,7 @@ export default function BimestresPage() {
     const fechaInicio = new Date(inicio.fecha)
     const fechaFin = new Date(fin.fecha)
     const diasTranscurridos = Math.max(
-      (fechaFin.getTime() - fechaInicio.getTime()) / (1000 * 60 * 60 * 24),
+      Math.round((fechaFin.getTime() - fechaInicio.getTime()) / (1000 * 60 * 60 * 24)),
       1
     )
     const factor = 60 / diasTranscurridos
@@ -179,6 +179,7 @@ export default function BimestresPage() {
     const inyectadaEstimada = inyectada * factor
     const netoEstimado = tomadaEstimada - inyectadaEstimada
 
+    // Serie diaria de kWh/día (no por intervalo)
     const consumosPromedio: number[] = []
     for (let i = 1; i < lecturasFiltradas.length; i++) {
       const anterior = lecturasFiltradas[i - 1]
@@ -190,7 +191,11 @@ export default function BimestresPage() {
         1,
         Math.round((fechaActual.getTime() - fechaAnterior.getTime()) / (1000 * 60 * 60 * 24))
       )
-      consumosPromedio.push(netoIntervalo / diasIntervalo)
+      const rate = netoIntervalo / diasIntervalo
+      // Empuja UN valor por CADA día del intervalo
+      for (let d = 0; d < diasIntervalo; d++) {
+        consumosPromedio.push(rate)
+      }
     }
 
     const alpha = 1 - Math.pow(0.5, 1 / 9)
