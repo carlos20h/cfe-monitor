@@ -193,18 +193,33 @@ export default function BimestresPage() {
       consumosPromedio.push(netoIntervalo / diasIntervalo)
     }
 
-    const alpha = 0.6
+    const alpha = 1 - Math.pow(0.5, 1 / 9)
     let ewma = consumosPromedio[0] ?? 0
     for (let i = 1; i < consumosPromedio.length; i++) {
       ewma = alpha * consumosPromedio[i] + (1 - alpha) * ewma
     }
 
-    const ultimosDos = consumosPromedio.slice(-2)
-    const promedioUltimosDos =
-      ultimosDos.length > 0
-        ? ultimosDos.reduce((acc, valor) => acc + valor, 0) / ultimosDos.length
+    const ultimosTres = consumosPromedio.slice(-3)
+    const promedioUltimosTres =
+      ultimosTres.length > 0
+        ? ultimosTres.reduce((acc, valor) => acc + valor, 0) / ultimosTres.length
         : ewma
-    const consumoDiarioHibrido = consumosPromedio.length > 0 ? (ewma + promedioUltimosDos) / 2 : 0
+
+    let consumoDiarioHibrido = 0
+    if (consumosPromedio.length > 0) {
+      const base = ewma
+      if (Math.abs(base) < 1e-6) {
+        consumoDiarioHibrido = promedioUltimosTres
+      } else {
+        const cambioRelativo = (promedioUltimosTres - base) / base
+        if (Math.abs(cambioRelativo) > 0.3) {
+          const cambioCapado = Math.max(Math.min(cambioRelativo, 0.4), -0.4)
+          consumoDiarioHibrido = base * (1 + cambioCapado)
+        } else {
+          consumoDiarioHibrido = base
+        }
+      }
+    }
 
     const diasRestantes = Math.max(60 - diasTranscurridos, 0)
     const netoProyectado = neto + consumoDiarioHibrido * diasRestantes
