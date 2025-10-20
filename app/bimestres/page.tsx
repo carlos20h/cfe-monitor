@@ -169,12 +169,45 @@ export default function BimestresPage() {
   if (bimestreEnCurso) {
     const fechaInicio = new Date(inicio.fecha)
     const fechaFin = new Date(fin.fecha)
-    const diasTranscurridos = (fechaFin.getTime() - fechaInicio.getTime()) / (1000 * 60 * 60 * 24)
+    const diasTranscurridos = Math.max(
+      (fechaFin.getTime() - fechaInicio.getTime()) / (1000 * 60 * 60 * 24),
+      1
+    )
     const factor = 60 / diasTranscurridos
 
     const tomadaEstimada = tomada * factor
     const inyectadaEstimada = inyectada * factor
     const netoEstimado = tomadaEstimada - inyectadaEstimada
+
+    const consumosPromedio: number[] = []
+    for (let i = 1; i < lecturasFiltradas.length; i++) {
+      const anterior = lecturasFiltradas[i - 1]
+      const actual = lecturasFiltradas[i]
+      const netoIntervalo = (actual.tomada - anterior.tomada) - (actual.inyectada - anterior.inyectada)
+      const fechaAnterior = new Date(anterior.fecha)
+      const fechaActual = new Date(actual.fecha)
+      const diasIntervalo = Math.max(
+        1,
+        Math.round((fechaActual.getTime() - fechaAnterior.getTime()) / (1000 * 60 * 60 * 24))
+      )
+      consumosPromedio.push(netoIntervalo / diasIntervalo)
+    }
+
+    const alpha = 0.6
+    let ewma = consumosPromedio[0] ?? 0
+    for (let i = 1; i < consumosPromedio.length; i++) {
+      ewma = alpha * consumosPromedio[i] + (1 - alpha) * ewma
+    }
+
+    const ultimosDos = consumosPromedio.slice(-2)
+    const promedioUltimosDos =
+      ultimosDos.length > 0
+        ? ultimosDos.reduce((acc, valor) => acc + valor, 0) / ultimosDos.length
+        : ewma
+    const consumoDiarioHibrido = consumosPromedio.length > 0 ? (ewma + promedioUltimosDos) / 2 : 0
+
+    const diasRestantes = Math.max(60 - diasTranscurridos, 0)
+    const netoProyectado = neto + consumoDiarioHibrido * diasRestantes
 
     let consumoCalculado = netoEstimado
     let detalle = ''
@@ -210,6 +243,7 @@ export default function BimestresPage() {
       <div className="bg-yellow-50 p-4 rounded border mb-4 text-sm whitespace-pre-line">
         <p className="font-semibold text-yellow-700">📈 Proyección estimada</p>
         <p>🔁 <strong>Consumo neto estimado:</strong> {netoEstimado.toFixed(2)} kWh</p>
+        <p>🧮 <strong>Consumo neto proyectado (híbrido):</strong> {netoProyectado.toFixed(2)} kWh</p>
         <p>🧾 <strong>Detalle:</strong><br />{detalle}</p>
         <p>💸 <strong>IVA:</strong> ${iva.toFixed(2)}</p>
         <p className="font-bold text-lg mt-2">💵 Total estimado: ${total.toFixed(2)}</p>
