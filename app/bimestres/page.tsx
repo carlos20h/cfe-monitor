@@ -122,75 +122,58 @@ export default function BimestresPage() {
   }
 
   const calcularResumen = () => {
-  if (!bimestreActivo || lecturas.length < 2) return null
+    if (!bimestreActivo || lecturas.length < 2) return null
 
-  const lecturasFiltradas = lecturas.filter(r => {
-    const f = new Date(r.fecha)
-    return f >= new Date(bimestreActivo.inicio) && f <= new Date(bimestreActivo.fin)
-  })
-
-  if (lecturasFiltradas.length < 2) return null
-
-  const inicio = lecturasFiltradas[0]
-  const fin = lecturasFiltradas.at(-1)!
-  const hoy = new Date().toISOString().split('T')[0]
-  const bimestreEnCurso = bimestreActivo.fin === hoy
-
-  const tomada = fin.tomada - inicio.tomada
-  const inyectada = fin.inyectada - inicio.inyectada
-  const neto = tomada - inyectada
-
-  let saldoKWh = 0
-  let saldoPesos = 0
-
-  for (let i = 0; i < bimestreActivo.index; i++) {
-    const b = bimestres[i]
-    const l = lecturas.filter(r => {
+    const lecturasFiltradas = lecturas.filter(r => {
       const f = new Date(r.fecha)
-      return f >= new Date(b.inicio) && f <= new Date(b.fin)
+      return f >= new Date(bimestreActivo.inicio) && f <= new Date(bimestreActivo.fin)
     })
-    if (l.length < 2) continue
 
-    const primera = l[0]
-    const ultima = l.at(-1)!
-    const netoPrevio = (ultima.tomada - primera.tomada) - (ultima.inyectada - primera.inyectada)
+    if (lecturasFiltradas.length < 2) return null
 
-    if (netoPrevio <= 0) {
-      saldoKWh += Math.abs(netoPrevio)
-      saldoPesos += 147.32
-    } else if (saldoKWh >= netoPrevio) {
-      saldoKWh -= netoPrevio
-      saldoPesos += 147.32
-    } else {
-      saldoKWh = 0
-    }
-  }
+    const inicio = lecturasFiltradas[0]
+    const fin = lecturasFiltradas.at(-1)!
+    const hoy = new Date().toISOString().split('T')[0]
+    const bimestreEnCurso = bimestreActivo.fin === hoy
 
-  if (bimestreEnCurso) {
-    const fechaInicio = new Date(inicio.fecha)
-    const fechaFin = new Date(fin.fecha)
-    const diasTranscurridos = (fechaFin.getTime() - fechaInicio.getTime()) / (1000 * 60 * 60 * 24)
-    const factor = 60 / diasTranscurridos
+    const tomada = fin.tomada - inicio.tomada
+    const inyectada = fin.inyectada - inicio.inyectada
+    const neto = tomada - inyectada
 
-    const tomadaEstimada = tomada * factor
-    const inyectadaEstimada = inyectada * factor
-    const netoEstimado = tomadaEstimada - inyectadaEstimada
+    let saldoKWh = 0
+    let saldoPesos = 0
 
-    let consumoCalculado = netoEstimado
-    let detalle = ''
-    let subtotal = 0
+    const calcularCosto = (
+      consumoObjetivo: number,
+      saldoDisponible: number,
+      mensajeNegativo: string
+    ) => {
+      if (consumoObjetivo <= 0) {
+        const subtotal = 127
+        const iva = subtotal * 0.16
+        return {
+          detalle: mensajeNegativo,
+          subtotal,
+          iva,
+          total: subtotal + iva,
+          saldoRestante: saldoDisponible + Math.abs(consumoObjetivo)
+        }
+      }
 
-    if (saldoKWh >= consumoCalculado) {
-      detalle = 'Consumo cubierto con saldo a favor'
-      subtotal = 127
-      consumoCalculado = 0
-    } else if (consumoCalculado <= 0) {
-      detalle = 'Cargo fijo por consumo estimado negativo'
-      subtotal = 127
-      saldoKWh += Math.abs(consumoCalculado)
-      saldoPesos += 147.32
-    } else {
-      const restante = consumoCalculado - saldoKWh
+      if (saldoDisponible >= consumoObjetivo) {
+        const subtotal = 127
+        const iva = subtotal * 0.16
+        return {
+          detalle: 'Consumo cubierto con saldo a favor',
+          subtotal,
+          iva,
+          total: subtotal + iva,
+          saldoRestante: saldoDisponible - consumoObjetivo
+        }
+      }
+
+      const saldoAplicado = Math.min(saldoDisponible, consumoObjetivo)
+      const restante = consumoObjetivo - saldoAplicado
       const tramo1 = Math.min(restante, 150)
       const tramo2 = Math.min(Math.max(restante - 150, 0), 200)
       const tramo3 = Math.max(restante - 350, 0)
@@ -199,68 +182,157 @@ export default function BimestresPage() {
       const costo2 = tramo2 * 1.23
       const costo3 = tramo3 * 3.62
 
-      subtotal = costo1 + costo2 + costo3
-      detalle = `Saldo aplicado: ${saldoKWh.toFixed(2)} kWh\nTramo 1 (1–150): $${costo1.toFixed(2)}\nTramo 2 (151–350): $${costo2.toFixed(2)}\nTramo 3 (>350): $${costo3.toFixed(2)}`
+      const subtotal = costo1 + costo2 + costo3
+      const iva = subtotal * 0.16
+
+      return {
+        detalle: `Saldo aplicado: ${saldoAplicado.toFixed(2)} kWh\nTramo 1 (1–150): $${costo1.toFixed(2)}\nTramo 2 (151–350): $${costo2.toFixed(2)}\nTramo 3 (>350): $${costo3.toFixed(2)}`,
+        subtotal,
+        iva,
+        total: subtotal + iva,
+        saldoRestante: saldoDisponible - saldoAplicado
+      }
     }
 
-    const iva = subtotal * 0.16
-    const total = subtotal + iva
+    for (let i = 0; i < bimestreActivo.index; i++) {
+      const b = bimestres[i]
+      const l = lecturas.filter(r => {
+        const f = new Date(r.fecha)
+        return f >= new Date(b.inicio) && f <= new Date(b.fin)
+      })
+      if (l.length < 2) continue
+
+      const primera = l[0]
+      const ultima = l.at(-1)!
+      const netoPrevio = (ultima.tomada - primera.tomada) - (ultima.inyectada - primera.inyectada)
+
+      if (netoPrevio <= 0) {
+        saldoKWh += Math.abs(netoPrevio)
+        saldoPesos += 147.32
+      } else if (saldoKWh >= netoPrevio) {
+        saldoKWh -= netoPrevio
+        saldoPesos += 147.32
+      } else {
+        saldoKWh = 0
+      }
+    }
+
+    if (bimestreEnCurso) {
+      const fechaInicio = new Date(inicio.fecha)
+      const fechaFin = new Date(fin.fecha)
+      const diasTranscurridos = Math.max(
+        Math.round((fechaFin.getTime() - fechaInicio.getTime()) / (1000 * 60 * 60 * 24)),
+        1
+      )
+      const factor = 60 / diasTranscurridos
+
+      const tomadaEstimada = tomada * factor
+      const inyectadaEstimada = inyectada * factor
+      const netoEstimado = tomadaEstimada - inyectadaEstimada
+
+      // Serie diaria de kWh/día (no por intervalo)
+      const consumosPromedio: number[] = []
+      for (let i = 1; i < lecturasFiltradas.length; i++) {
+        const anterior = lecturasFiltradas[i - 1]
+        const actual = lecturasFiltradas[i]
+        const netoIntervalo = (actual.tomada - anterior.tomada) - (actual.inyectada - anterior.inyectada)
+        const fechaAnterior = new Date(anterior.fecha)
+        const fechaActual = new Date(actual.fecha)
+        const diasIntervalo = Math.max(
+          1,
+          Math.round((fechaActual.getTime() - fechaAnterior.getTime()) / (1000 * 60 * 60 * 24))
+        )
+        const rate = netoIntervalo / diasIntervalo
+        // Empuja UN valor por CADA día del intervalo
+        for (let d = 0; d < diasIntervalo; d++) {
+          consumosPromedio.push(rate)
+        }
+      }
+
+      const alpha = 1 - Math.pow(0.5, 1 / 9)
+      let ewma = consumosPromedio[0] ?? 0
+      for (let i = 1; i < consumosPromedio.length; i++) {
+        ewma = alpha * consumosPromedio[i] + (1 - alpha) * ewma
+      }
+
+      const ultimosTres = consumosPromedio.slice(-3)
+      const promedioUltimosTres =
+        ultimosTres.length > 0
+          ? ultimosTres.reduce((acc, valor) => acc + valor, 0) / ultimosTres.length
+          : ewma
+
+      let consumoDiarioHibrido = 0
+      if (consumosPromedio.length > 0) {
+        const base = ewma
+        if (Math.abs(base) < 1e-6) {
+          consumoDiarioHibrido = promedioUltimosTres
+        } else {
+          const cambioRelativo = (promedioUltimosTres - base) / base
+          if (Math.abs(cambioRelativo) > 0.3) {
+            const cambioCapado = Math.max(Math.min(cambioRelativo, 0.4), -0.4)
+            consumoDiarioHibrido = base * (1 + cambioCapado)
+          } else {
+            consumoDiarioHibrido = base
+          }
+        }
+      }
+
+      const diasRestantes = Math.max(60 - diasTranscurridos, 0)
+      const netoProyectado = neto + consumoDiarioHibrido * diasRestantes
+
+      const saldoInicial = saldoKWh
+      const costoLineal = calcularCosto(
+        netoEstimado,
+        saldoInicial,
+        'Cargo fijo por consumo estimado negativo'
+      )
+      saldoKWh = costoLineal.saldoRestante
+
+      const costoHibrido = calcularCosto(
+        netoProyectado,
+        saldoInicial,
+        'Cargo fijo por consumo proyectado (híbrido) negativo'
+      )
+
+      return (
+        <div className="bg-yellow-50 p-4 rounded border mb-4 text-sm whitespace-pre-line">
+          <p className="font-semibold text-yellow-700">📈 Proyección estimada</p>
+          <p>🔁 <strong>Consumo neto estimado:</strong> {netoEstimado.toFixed(2)} kWh</p>
+          <p>🧮 <strong>Consumo neto proyectado (híbrido):</strong> {netoProyectado.toFixed(2)} kWh</p>
+          <p>
+            💵 <strong>Total estimado (lineal):</strong> ${costoLineal.total.toFixed(2)}{' '}
+            <span className="text-xs text-yellow-700">(IVA ${costoLineal.iva.toFixed(2)})</span>
+          </p>
+          <p>🧾 <strong>Detalle lineal:</strong><br />{costoLineal.detalle}</p>
+          <p>
+            💵 <strong>Total estimado (híbrido):</strong> ${costoHibrido.total.toFixed(2)}{' '}
+            <span className="text-xs text-yellow-700">(IVA ${costoHibrido.iva.toFixed(2)})</span>
+          </p>
+          <p>🧾 <strong>Detalle híbrido:</strong><br />{costoHibrido.detalle}</p>
+          <p>⚡ <strong>Saldo acumulado tras estimación lineal:</strong> {costoLineal.saldoRestante.toFixed(0)} kWh</p>
+          <p>⚡ <strong>Saldo con proyección híbrida:</strong> {costoHibrido.saldoRestante.toFixed(0)} kWh</p>
+        </div>
+      )
+    }
+
+    const costoCerrado = calcularCosto(
+      neto,
+      saldoKWh,
+      'Cargo fijo por consumo neto negativo'
+    )
+    saldoKWh = costoCerrado.saldoRestante
 
     return (
-      <div className="bg-yellow-50 p-4 rounded border mb-4 text-sm whitespace-pre-line">
-        <p className="font-semibold text-yellow-700">📈 Proyección estimada</p>
-        <p>🔁 <strong>Consumo neto estimado:</strong> {netoEstimado.toFixed(2)} kWh</p>
-        <p>🧾 <strong>Detalle:</strong><br />{detalle}</p>
-        <p>💸 <strong>IVA:</strong> ${iva.toFixed(2)}</p>
-        <p className="font-bold text-lg mt-2">💵 Total estimado: ${total.toFixed(2)}</p>
-        <p>⚡ <strong>Saldo acumulado:</strong> {saldoKWh.toFixed(0)} kWh</p>
+      <div className="bg-blue-50 p-4 rounded border mb-4 text-sm whitespace-pre-line">
+        <p className="font-semibold text-blue-700">📊 Resumen del bimestre cerrado</p>
+        <p>🔁 <strong>Consumo neto:</strong> {neto.toFixed(2)} kWh</p>
+        <p>🧾 <strong>Detalle:</strong><br />{costoCerrado.detalle}</p>
+        <p>💸 <strong>IVA:</strong> ${costoCerrado.iva.toFixed(2)}</p>
+        <p className="font-bold text-lg mt-2">💵 Total estimado: ${costoCerrado.total.toFixed(2)}</p>
+        <p>⚡ <strong>Saldo acumulado disponible:</strong> {saldoKWh.toFixed(0)} kWh</p>
       </div>
     )
   }
-
-  let consumoCalculado = neto
-  let detalle = ''
-  let subtotal = 0
-
-  if (saldoKWh >= consumoCalculado) {
-    detalle = 'Consumo cubierto con saldo a favor'
-    subtotal = 127
-    consumoCalculado = 0
-    saldoPesos += 147.32
-    saldoKWh -= neto
-  } else if (consumoCalculado <= 0) {
-    subtotal = 127
-    detalle = 'Cargo fijo por consumo neto negativo'
-    saldoKWh += Math.abs(consumoCalculado)
-    saldoPesos += 147.32
-  } else {
-    const restante = consumoCalculado - saldoKWh
-    const tramo1 = Math.min(restante, 150)
-    const tramo2 = Math.min(Math.max(restante - 150, 0), 200)
-    const tramo3 = Math.max(restante - 350, 0)
-
-    const costo1 = tramo1 * 1.01
-    const costo2 = tramo2 * 1.23
-    const costo3 = tramo3 * 3.62
-
-    subtotal = costo1 + costo2 + costo3
-    detalle = `Saldo aplicado: ${saldoKWh.toFixed(2)} kWh\nTramo 1 (1–150): $${costo1.toFixed(2)}\nTramo 2 (151–350): $${costo2.toFixed(2)}\nTramo 3 (>350): $${costo3.toFixed(2)}`
-  }
-
-  const iva = subtotal * 0.16
-  const total = subtotal + iva
-
-  return (
-    <div className="bg-blue-50 p-4 rounded border mb-4 text-sm whitespace-pre-line">
-      <p className="font-semibold text-blue-700">📊 Resumen del bimestre cerrado</p>
-      <p>🔁 <strong>Consumo neto:</strong> {neto.toFixed(2)} kWh</p>
-      <p>🧾 <strong>Detalle:</strong><br />{detalle}</p>
-      <p>💸 <strong>IVA:</strong> ${iva.toFixed(2)}</p>
-      <p className="font-bold text-lg mt-2">💵 Total estimado: ${total.toFixed(2)}</p>
-      <p>⚡ <strong>Saldo acumulado disponible:</strong> {saldoKWh.toFixed(0)} kWh</p>
-    </div>
-  )
-}
 
 
   return (
